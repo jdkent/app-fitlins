@@ -54,6 +54,60 @@ def _to_path(value: str | None, field_name: str, required: bool = True) -> Path 
     return path
 
 
+def _get_nested(config: dict[str, Any], path: tuple[str, ...]) -> Any:
+    current: Any = config
+    for key in path:
+        if not isinstance(current, dict) or key not in current:
+            return None
+        current = current[key]
+    return current
+
+
+def _set_nested_default(config: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
+    if _get_nested(config, path) is not None:
+        return
+    current = config
+    for key in path[:-1]:
+        if key not in current or not isinstance(current[key], dict):
+            current[key] = {}
+        current = current[key]
+    current[path[-1]] = value
+
+
+def apply_brainlife_flat_overrides(config: dict[str, Any]) -> dict[str, Any]:
+    """Map flat Brainlife UI keys into nested app config blocks.
+
+    Brainlife app config schema is typically flat, but this app uses nested
+    blocks (`design`, `confounds`, `fitlins`, `advanced`).
+    """
+    mappings: dict[str, tuple[str, ...]] = {
+        "design_name": ("design", "name"),
+        "design_description": ("design", "description"),
+        "condition_column": ("design", "condition_column"),
+        "hrf_model": ("design", "hrf_model"),
+        "auto_dummy_contrasts": ("design", "auto_dummy_contrasts"),
+        "auto_task_vs_baseline": ("design", "auto_task_vs_baseline"),
+        "confounds_strategy": ("confounds", "strategy"),
+        "include_framewise_displacement": ("confounds", "include_framewise_displacement"),
+        "include_dvars": ("confounds", "include_dvars"),
+        "include_cosine_drift_terms": ("confounds", "include_cosine_drift_terms"),
+        "confounds_strict": ("confounds", "strict"),
+        "fitlins_space": ("fitlins", "space"),
+        "fitlins_desc_label": ("fitlins", "desc_label"),
+        "fitlins_estimator": ("fitlins", "estimator"),
+        "fitlins_drift_model": ("fitlins", "drift_model"),
+        "fitlins_n_cpus": ("fitlins", "n_cpus"),
+        "fitlins_mem_gb": ("fitlins", "mem_gb"),
+        "fitlins_drop_missing": ("fitlins", "drop_missing"),
+        "dry_run": ("advanced", "dry_run"),
+        "model_json_path": ("advanced", "model_json_path"),
+    }
+    for key, nested_path in mappings.items():
+        if key in config and config[key] is not None:
+            _set_nested_default(config, nested_path, config[key])
+    return config
+
+
 def infer_entities_from_name(path: Path) -> dict[str, str]:
     entities: dict[str, str] = {}
     name = path.name
@@ -485,8 +539,26 @@ def _write_model_summary(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _publish_outputs(out_dir: Path) -> None:
+    exports = {
+        "fitlins_output": "fitlins",
+        "model_output": "model",
+    }
+    for dst_name, src_name in exports.items():
+        src = (out_dir / src_name).resolve()
+        if not src.exists():
+            continue
+        dst = Path(dst_name)
+        if dst.exists() or dst.is_symlink():
+            if dst.is_symlink() or dst.is_file():
+                dst.unlink()
+            else:
+                shutil.rmtree(dst)
+        dst.symlink_to(src)
+
+
 def run(config_path: str = "config.json") -> None:
-    config = _read_json(Path(config_path))
+    config = apply_brainlife_flat_overrides(_read_json(Path(config_path)))
     out_dir = Path("out_dir")
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -587,6 +659,7 @@ def run(config_path: str = "config.json") -> None:
     )
 
     if advanced.get("dry_run", False):
+        _publish_outputs(out_dir)
         print("Dry run enabled; skipping FitLins execution.")
         print("Generated model:", saved_model)
         return
@@ -594,6 +667,7 @@ def run(config_path: str = "config.json") -> None:
     print("Running FitLins command:")
     print(" ".join(shlex.quote(part) for part in cmd))
     subprocess.run(cmd, check=True)
+    _publish_outputs(out_dir)
 
 
 if __name__ == "__main__":

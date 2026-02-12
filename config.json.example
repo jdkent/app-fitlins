@@ -1,4 +1,65 @@
 {
-    "t1": "t1.nii.gz",
-    "outres": "1 1 1"
+  "runs": [
+    {
+      "bold": "/path/to/sub-01_task-stroop_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz",
+      "bold_json": "/path/to/sub-01_task-stroop_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold.json",
+      "events_tsv": "/path/to/sub-01_task-stroop_run-01_events.tsv",
+      "confounds_tsv": "/path/to/sub-01_task-stroop_run-01_desc-confounds_timeseries.tsv",
+      "confounds_json": "/path/to/sub-01_task-stroop_run-01_desc-confounds_timeseries.json",
+      "brain_mask": "/path/to/sub-01_task-stroop_run-01_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz",
+      "entities": {
+        "subject": "01",
+        "task": "stroop",
+        "run": "01",
+        "space": "MNI152NLin2009cAsym"
+      }
+    }
+  ],
+  "default_entities": {
+    "space": "MNI152NLin2009cAsym"
+  },
+  "design": {
+    "name": "stroop_first_level",
+    "description": "First-level GLM with trial_type conditions and recommended confounds.",
+    "condition_column": "trial_type",
+    "hrf_model": "spm",
+    "auto_dummy_contrasts": true,
+    "auto_task_vs_baseline": true,
+    "contrasts": [
+      {
+        "name": "incongruent_gt_congruent",
+        "weights": {
+          "incongruent": 1,
+          "congruent": -1
+        }
+      }
+    ]
+  },
+  "confounds": {
+    "strategy": "acompcor6",
+    "include_framewise_displacement": true,
+    "include_dvars": true,
+    "include_cosine_drift_terms": false,
+    "strict": false
+  },
+  "fitlins": {
+    "space": "MNI152NLin2009cAsym",
+    "desc_label": "preproc",
+    "estimator": "nilearn",
+    "drift_model": "cosine",
+    "n_cpus": 8,
+    "mem_gb": 24,
+    "drop_missing": true,
+    "participant_label": [],
+    "force_index": [],
+    "ignore": [],
+    "extra_args": []
+  },
+  "advanced": {
+    "model_json_path": null,
+    "dry_run": false
+  },
+  "runtime": {
+    "fitlins_command": null
+  }
 }

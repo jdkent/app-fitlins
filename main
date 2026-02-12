@@ -1,18 +1,26 @@
 #!/bin/bash
 
-#SBATCH --job-name=template
+#SBATCH --job-name=fitlins
 #SBATCH --ntasks-per-node=1
-#SBATCH --mem=1G
-#SBATCH --time=00:15:00
+#SBATCH --mem=24G
+#SBATCH --time=12:00:00
 
 # Copyright (c) 2020 brainlife.io at University of Texas at Austin and Indiana University
-# 
+#
 # This is the main file run by the brainlife.io orchestration system
 #
 # Author: Franco Pestilli
 
+set -euo pipefail
+
 # make output directory
 mkdir -p out_dir
 
-# run the actual python code
-singularity exec docker://brainlife/dipy:1.1.1 python3 main.py
+FITLINS_IMAGE="${FITLINS_IMAGE:-docker://poldracklab/fitlins:0.11.0}"
+
+# Prefer running the wrapper inside the FitLins container, with a local fallback.
+if command -v singularity >/dev/null 2>&1; then
+    singularity exec -e "$FITLINS_IMAGE" python3 main.py
+else
+    python3 main.py
+fi

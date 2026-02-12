@@ -1,38 +1,56 @@
-# app-template-python
+# brainlife/app-fitlins-firstlevel
 
 [![Abcdspec-compliant](https://img.shields.io/badge/ABCD_Spec-v1.1-green.svg)](https://github.com/brain-life/abcd-spec)
-[![Run on Brainlife.io](https://img.shields.io/badge/Brainlife-bl.app.444-blue.svg)](https://doi.org/10.25663/bl.app.444)
 
-## Documentation
+Brainlife app wrapper for FitLins with a user-centered, human-readable first-level GLM interface.
 
-This is a template for a python-based brainlife.io/app. Please add the description of the app here.
+This app is designed for the common workflow:
+1. preprocessed BOLD from fMRIPrep derivatives,
+2. confounds from fMRIPrep (`desc-confounds_timeseries.tsv`),
+3. task events from raw BIDS (`events.tsv`),
+4. simple first-level model setup without manually editing full BIDS Stats Models JSON.
 
-You can include: 
-1. What the App does, and how it does it at the basic level. 
-2. Briefly description of input / output files.
+The app generates a BIDS Stats Model JSON from the `design` + `confounds` blocks in `config.json`, stages a minimal BIDS + derivatives layout, and runs FitLins.
+
+## Interface Highlights
+- `runs[]`: one object per run with `bold`, `events_tsv`, and `confounds_tsv`.
+- `design`: readable model controls (`condition_column`, `hrf_model`, and contrast weights by condition name).
+- `confounds`: strategy-based nuisance selection (`acompcor6`, `motion_24`, `basic`, `custom`, `none`).
+- `advanced.model_json_path`: escape hatch for full manual BIDS Stats Models JSON.
+
+See `config.json.example` for a complete example.
+
+## Local Test Run
+```bash
+cp config.json.example config.json
+python3 main.py
+```
+
+To validate config/model generation only:
+```json
+{
+  "advanced": { "dry_run": true }
+}
+```
+
+## Outputs
+- `out_dir/model/model-generated_smdl.json`: generated (or copied) BIDS Stats Model.
+- `out_dir/model/model-summary.md`: readable summary of conditions/confounds/analysis level.
+- `out_dir/fitlins/`: FitLins derivative outputs and reports.
+
+## Scientific Defaults
+- First-level run model with `Factor` + `Convolve` transforms on `trial_type` by default.
+- Confounds default to `acompcor6` plus motion, FD, and DVARS (dropping missing columns unless `strict: true`).
+- App is intentionally first-level only for now (`analysis_level=run`).
 
 ## Authors
-- [Author1](email), Affiliation
-
-## Contributors
-- [Author2](email), Affiliation
-- [Author3](email), Affiliation
+- FitLins and Brainlife contributors
 
 ## Citations
-We kindly ask that you cite the following articles when publishing papers and code using this app. 
+Please cite:
 
-1. **brainlife. io: A decentralized and open source cloud platform to support neuroscience research**. Hayashi, S., Caron, B. A., et al. & Pestilli, F. (2023). ArXiv. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10274934/
-
-2. **Add any other citations based on the app** 
-
-## Funding Acknowledgement
-brainlife.io is publicly funded. For the sustainability of the project, we kindly ask that you acknowledge the following funding sources:
-
-[![NSF-BCS-1734853](https://img.shields.io/badge/NSF_BCS-1734853-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1734853)
-[![NSF-BCS-1636893](https://img.shields.io/badge/NSF_BCS-1636893-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1636893)
-[![NSF-ACI-1916518](https://img.shields.io/badge/NSF_ACI-1916518-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1916518)
-[![NSF-IIS-1912270](https://img.shields.io/badge/NSF_IIS-1912270-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1912270)
-[![NIH-NIBIB-R01EB030896](https://img.shields.io/badge/NIH_NIBIB-R01EB030896-green.svg)](https://grantome.com/grant/NIH/R01-EB030896-01)
-
+1. Hayashi, S., Caron, B. A., et al. (2023). *brainlife.io: A decentralized and open source cloud platform to support neuroscience research*. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10274934/
+2. Markiewicz, C. J., et al. (2021). *The OpenNeuro resource for sharing of neuroscience data*. https://doi.org/10.7554/eLife.71774
+3. BIDS Stats Models specification. https://bids-standard.github.io/stats-models/
 
 #### MIT Copyright (c) 2021 brainlife.io The University of Texas at Austin and Indiana University
